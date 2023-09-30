@@ -6,7 +6,7 @@ import axios from 'axios';
 const initialEmail = '';
 const initialSteps = 0;
 const initialIndex = 4 ;// the currIndex the "B" is at
-const initialXY = 'Coordinates (2,2)';
+const initialXY = '(2.2)';
 const initialMessage = '';
 const Xcoords = [
   1, 2, 3, 1, 2, 3, 1, 2, 3
@@ -25,60 +25,38 @@ export default function AppFunctional(props) {
   const [xy, setXY] = useState(initialXY);
   
 
-
- // function getXY(currIndex) {
-
-    // if( currIndex === 0){
-    //   setXY('1,1');
-    // } else if( currIndex === 1){
-    //   setXY('2,1');
-    // } else if( currIndex === 2){
-    //   setXY('3,1');
-    // } else if (currIndex === 3){
-    //   setXY('1,2');
-    // } else if (currIndex === 4){
-    //   setXY('2,2');
-    // } else if (currIndex === 5){
-    //   setXY('3,2');
-    // } else if (currIndex === 6){
-    //   setXY('1,3');
-    // } else if (currIndex === 7){
-    //   setXY('2,3');
-    // } else if (currIndex === 8){
-    //   setXY('3,3');
-    // }
-    //const coords = [
-      //(1,1), (2,1), (3, 1), (1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)
-    //];
-
-    //return coords[currIndex];
- // }
-
-  function getXYMessage(currIndex) {
-  }
+  // function getXYMessage(currIndex) {
+  // }
 
   function reset() {
     // Use this helper to reset all states to their initial values.
     setCurrIndex(initialIndex);
     setMessage(initialMessage);
     setSteps(initialSteps);
+    setEmail(initialEmail);
+    setXY(initialXY);
   }
 
   function getNextIndex(direction) {
         if( ((currIndex  === 0 || currIndex  === 3 || currIndex  === 6 ) && direction === 'left') ||  ((currIndex === 0 || currIndex === 1 || currIndex === 2) && direction === 'up') || ((currIndex === 2 || currIndex === 5 || currIndex === 8) && direction === 'right') || ((currIndex === 6 || currIndex === 7 || currIndex === 8) && direction === 'down')){
-      return currIndex; 
+          setMessage(`You can't go ${direction}`)
+          return currIndex; 
         } else if (direction === 'up'){
+          setMessage(initialMessage);
           setCurrIndex(currIndex-3);
-          setXY(`Coordinates (${Xcoords[currIndex-3]}, ${Ycoords[currIndex-3]})`);
+          setXY(`(${Xcoords[currIndex-3]}.${Ycoords[currIndex-3]})`);
     } else if (direction === 'down'){
+          setMessage(initialMessage);
           setCurrIndex(currIndex+3);
-          setXY(`Coordinates (${Xcoords[currIndex+3]}, ${Ycoords[currIndex+3]})`);
+          setXY(`(${Xcoords[currIndex+3]}.${Ycoords[currIndex+3]})`);
     } else if (direction === 'left'){
+          setMessage(initialMessage);
           setCurrIndex(currIndex-1);
-          setXY(`Coordinates (${Xcoords[currIndex-1]}, ${Ycoords[currIndex-1]})`);
+          setXY(`(${Xcoords[currIndex-1]}.${Ycoords[currIndex-1]})`);
     } else if (direction === 'right'){
+          setMessage(initialMessage);
           setCurrIndex(currIndex+1);
-          setXY(`Coordinates (${Xcoords[currIndex+1]}, ${Ycoords[currIndex+1]})`);
+          setXY(`(${Xcoords[currIndex+1]}.${Ycoords[currIndex+1]})`);
   
     }
   }
@@ -87,7 +65,17 @@ export default function AppFunctional(props) {
     // This event handler can use the helper above to obtain a new currIndex for the "B",
     // and change any states accordingly.
     getNextIndex(evt.target.id);
-    setSteps(steps+1);    
+    // setSteps(steps+1);
+    if( ((currIndex  === 0 || currIndex  === 3 || currIndex  === 6 ) && evt.target.id === 'left') 
+      ||  ((currIndex === 0 || currIndex === 1 || currIndex === 2) && evt.target.id === 'up') 
+      || ((currIndex === 2 || currIndex === 5 || currIndex === 8) && evt.target.id === 'right') 
+      || ((currIndex === 6 || currIndex === 7 || currIndex === 8) && evt.target.id === 'down')){
+      setSteps(steps)
+      return steps; 
+    } else {
+      setSteps(steps+1);
+      return steps;
+    }
   }
 
   function onChange(evt) {
@@ -104,6 +92,10 @@ export default function AppFunctional(props) {
       steps: steps,
       email: email
     }
+
+    if(newMove.email === initialEmail){
+      setMessage('Ouch: email is required');
+    } else{
     try {
       const res = await axios.post('http://localhost:9000/api/result', newMove);
       console.log('received post data:', res.data);
@@ -112,17 +104,25 @@ export default function AppFunctional(props) {
 
     } catch(err){
       console.error('axios POST error:',err);
+      console.log(err.response.statusText);
+      if(err.response.statusText === 'Unprocessable Entity'){
+        setMessage('Ouch: email must be a valid email');
+      } else if (err.response.statusText === 'Forbidden'){
+        setMessage(err.response.data.message);
+      }
     } 
     finally{
       setEmail(initialEmail);
     }
   }
-
+}
+const movesA = `You moved ${steps} times`
+const movesB = `You moved ${steps} time`
   return (
     <div id="wrapper" className={props.className}>
       <div className="info">
-        <h3 id="coordinates">{`${xy}`}</h3>
-        <h3 id="steps">{`You moved ${steps} times`}</h3>
+        <h3 id="coordinates" data-testid="coordinates">{`Coordinates ${xy}`}</h3>
+        <h3 id="steps">{`${steps === 1 ? movesB : movesA}`}</h3>
         <h3 id="coordinates">{`Current Index: ${currIndex}`}</h3>
       </div>
       <div id="grid">
@@ -141,6 +141,7 @@ export default function AppFunctional(props) {
         <button 
           id="left"
           onClick={move}
+          data-testid="left"
         >
           LEFT
         </button>
@@ -148,6 +149,7 @@ export default function AppFunctional(props) {
         <button 
           id="up"
           onClick={move}
+          data-testid="up"
         >
           UP
         </button>
@@ -155,6 +157,7 @@ export default function AppFunctional(props) {
         <button 
           id="right"
           onClick={move}
+          data-testid="right"
         >
           RIGHT
         </button>
@@ -162,6 +165,7 @@ export default function AppFunctional(props) {
         <button 
           id="down"
           onClick={move}
+          data-testid="down"
         >
           DOWN
         </button>
@@ -169,13 +173,14 @@ export default function AppFunctional(props) {
         <button
           id="reset"
           onClick={reset}
+          data-testid="reset"
         >
           reset
         </button>
       </div>
       <form onSubmit={onSubmit}>
         <input id="email" type="email" placeholder="type email" onChange={onChange} value={email}></input>
-        <input id="submit" type="submit"></input>
+        <input id="submit" type="submit" data-testid="submit"></input>
       </form>
     </div>
   )

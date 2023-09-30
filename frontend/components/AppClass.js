@@ -14,13 +14,6 @@ const Ycoords = [
   1, 1, 1, 2, 2, 2, 3, 3, 3
 ];
 
-// const initialState = {
-//   message: initialMessage,
-//   email: initialEmail,
-//   index: initialIndex,
-//   steps: initialSteps,
-// }
-
 export default class AppClass extends React.Component {
   // THE FOLLOWING HELPERS ARE JUST RECOMMENDATIONS.
   // You can delete them and build your own logic from scratch.
@@ -35,20 +28,7 @@ export default class AppClass extends React.Component {
     }
   }
 
-
-  // getXY = () => {
-    // It it not necessary to have a state to track the coordinates.
-    // It's enough to know what index the "B" is at, to be able to calculate them.
-  // }
-
-  // getXYMessage = () => {
-    // It it not necessary to have a state to track the "Coordinates (2, 2)" message for the user.
-    // You can use the `getXY` helper above to obtain the coordinates, and then `getXYMessage`
-    // returns the fully constructed string.
-  // }
-  // componentDidUpdate(prevState){
     reset = () => {
-      // Use this helper to reset all states to their initial values.
       this.setState({
         currIndex: initialIndex,
         steps: initialSteps,
@@ -62,40 +42,56 @@ export default class AppClass extends React.Component {
       // This helper takes a direction ("left", "up", etc) and calculates what the next index
       // of the "B" would be. If the move is impossible because we are at the edge of the grid,
       // this helper should return the current index unchanged.
-      this.setState((prevState)=>{
-        if( ((prevState.currIndex  === 0 || prevState.currIndex  === 3 || prevState.currIndex  === 6 ) && direction === 'left') ||  ((prevState.currIndex === 0 || prevState.currIndex === 1 || prevState.currIndex === 2) && direction === 'up') || ((prevState.currIndex === 2 || prevState.currIndex === 5 || prevState.currIndex === 8) && direction === 'right') || ((prevState.currIndex === 6 || prevState.currIndex === 7 || prevState.currIndex === 8) && direction === 'down')){
-          return prevState.currIndex;
+      
+          if( ((this.state.currIndex  === 0 || this.state.currIndex  === 3 || this.state.currIndex  === 6 ) && direction === 'left') ||  ((this.state.currIndex === 0 || this.state.currIndex === 1 || this.state.currIndex === 2) && direction === 'up') || ((this.state.currIndex === 2 || this.state.currIndex === 5 || this.state.currIndex === 8) && direction === 'right') || ((this.state.currIndex === 6 || this.state.currIndex === 7 || this.state.currIndex === 8) && direction === 'down')){
+            this.setState((prevState)=>({
+              message: `You can't go ${direction}`
+              
+            }));
         } else if (direction === 'up'){
           this.setState((prevState)=>({
+            message: initialMessage,
             currIndex: prevState.currIndex - 3,
             xy: `Coordinates (${Xcoords[prevState.currIndex-3]}, ${Ycoords[prevState.currIndex-3]})`
           }));
         } else if (direction === 'down'){
           this.setState((prevState)=>({
+            message: initialMessage,
             currIndex: prevState.currIndex + 3,
             xy: `Coordinates (${Xcoords[prevState.currIndex+3]}, ${Ycoords[prevState.currIndex+3]})`
           }));
         } else if (direction === 'left'){
           this.setState((prevState)=>({
+            message: initialMessage,
             currIndex: prevState.currIndex - 1,
             xy: `Coordinates (${Xcoords[prevState.currIndex - 1]}, ${Ycoords[prevState.currIndex - 1]})`
           }));
         } else if (direction === 'right'){
           this.setState((prevState)=>({
+            message: initialMessage,
             currIndex: prevState.currIndex + 1,
             xy: `Coordinates (${Xcoords[prevState.currIndex + 1]}, ${Ycoords[prevState.currIndex + 1]})`
           }));
         }
-      })
     }
 
     move = (evt) => {
       // This event handler can use the helper above to obtain a new index for the "B",
       // and change any states accordingly.
       this.getNextIndex(evt.target.id);
-      this.setState((prevState)=>({
-        steps: prevState.steps + 1
-      }));
+      
+      if( ((this.state.currIndex  === 0 || this.state.currIndex  === 3 || this.state.currIndex  === 6 ) && evt.target.id === 'left') 
+        ||  ((this.state.currIndex === 0 || this.state.currIndex === 1 || this.state.currIndex === 2) && evt.target.id === 'up') 
+        || ((this.state.currIndex === 2 || this.state.currIndex === 5 || this.state.currIndex === 8) && evt.target.id === 'right') 
+        || ((this.state.currIndex === 6 || this.state.currIndex === 7 || this.state.currIndex === 8) && evt.target.id === 'down')){
+        this.setState((prevState)=>({
+          steps: prevState.steps
+        }));
+      } else {
+        this.setState((prevState)=>({
+          steps: prevState.steps + 1
+        }));
+      }
     }
 
     onChange = (evt) => {
@@ -114,6 +110,11 @@ export default class AppClass extends React.Component {
         steps: this.state.steps,
         email: this.state.email
       }
+      if(newMove.email === initialEmail){
+        this.setState(prevState=>({
+          message: 'Ouch: email is required'
+        }));
+      } else {
       try {
         const res = await axios.post('http://localhost:9000/api/result', newMove);
         console.log('received post data:', res.data);
@@ -123,21 +124,32 @@ export default class AppClass extends React.Component {
         }));
       } catch (err){
         console.error('axios POST error:', err);
+        if(err.response.statusText === 'Unprocessable Entity'){
+          this.setState(prevState=>({
+            message: 'Ouch: email must be a valid email'
+          }));
+        }  else if (err.response.statusText === 'Forbidden'){
+          this.setState(prevState=>({
+            message: err.response.data.message
+          }));
+        }
       } finally {
         this.setState(prevState=>({
           email: initialEmail
         }));
       }
     }
+  }
   //}
-
   render() {
     const { className } = this.props
+    const movesA = `You moved ${this.state.steps} times`
+    const movesB = `You moved ${this.state.steps} time`
     return (
       <div id="wrapper" className={className}>
         <div className="info">
-          <h3 id="coordinates">{this.state.xy}</h3>
-          <h3 id="steps">You moved {this.state.steps} times</h3>
+          <h3 id="coordinates" data-testid="coordinates">{this.state.xy}</h3>
+          <h3 id="steps" data-testid="steps">{`${this.state.steps === 1 ? movesB : movesA}`}</h3>
         </div>
         <div id="grid">
           {
@@ -152,15 +164,15 @@ export default class AppClass extends React.Component {
           <h3 id="message">{this.state.message}</h3>
         </div>
         <div id="keypad">
-          <button id="left" onClick={this.move}>LEFT</button>
-          <button id="up" onClick={this.move}>UP</button>
-          <button id="right" onClick={this.move}>RIGHT</button>
-          <button id="down" onClick={this.move}>DOWN</button>
-          <button id="reset" onClick={this.reset}>reset</button>
+          <button id="left" data-testid="left" onClick={this.move}>LEFT</button>
+          <button id="up" data-testid="up" onClick={this.move}>UP</button>
+          <button id="right" data-testid="right" onClick={this.move}>RIGHT</button>
+          <button id="down" data-testid="down" onClick={this.move}>DOWN</button>
+          <button id="reset" data-testid="reset" onClick={this.reset}>reset</button>
         </div>
         <form onSubmit={this.onSubmit}>
           <input id="email" type="email" placeholder="type email" onChange={this.onChange} value={this.state.email}></input>
-          <input id="submit" type="submit"></input>
+          <input id="submit" type="submit" data-testid="submit"></input>
         </form>
       </div>
     )
